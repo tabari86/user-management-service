@@ -7,6 +7,12 @@
 ![bcrypt](https://img.shields.io/badge/bcrypt-Password_Hashing-blue)
 ![Swagger](https://img.shields.io/badge/OpenAPI-3.0-brightgreen)
 ![REST API](https://img.shields.io/badge/REST-API-red)
+![Jest](https://img.shields.io/badge/Jest-Testing-red?logo=jest)
+![Supertest](https://img.shields.io/badge/Supertest-API_Tests-lightgrey)
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+
+
+--- 
 
 A lightweight REST API for user registration, login, JWT authentication and protected user profile management.
 
@@ -38,7 +44,7 @@ http://localhost:3000/api-docs
 
 ## Features
 
-| Feature                             | Description                         |
+| Feature             | Description                                         |
 | ------------------  | ----------------------------------------------------|
 | User Registration   | Create a new user account                           |
 | Password Hashing    | Passwords are hashed with bcrypt                    |
@@ -51,6 +57,11 @@ http://localhost:3000/api-docs
 | Swagger/OpenAPI     | Interactive API documentation                       |
 | Automated Tests     | API testing with Jest and Supertest                 |
 | Integration Testing | Endpoint validation and authentication flow testing |
+| Docker Support      | Containerized application and database              |
+
+
+
+
 ---
 
 ## Tech Stack
@@ -62,7 +73,12 @@ http://localhost:3000/api-docs
 * JWT
 * bcrypt
 * Swagger / OpenAPI
+* Jest
+* Supertest
+* Docker
+* Docker Compose
 * dotenv
+
 
 ---
 
@@ -95,7 +111,15 @@ user-management-service/
 │   └── userRoutes.js
 ├── swagger/
 │   └── userSwagger.js
+├── tests/
+│   ├── auth.api.test.js
+│   └── health.test.js
+├── .dockerignore  
 ├── .env.example
+├── .gitignore
+├── app.js
+├── docker-compose.yml
+├── Dockerfile
 ├── index.js
 ├── package.json
 ├── package-lock.json
@@ -145,6 +169,66 @@ Swagger UI:
 ```text
 http://localhost:3000/api-docs
 ```
+
+## Docker
+
+Run the complete application stack:
+
+```bash
+docker compose up --build
+```
+For the first startup, Docker will automatically:
+
+- Build the Node.js application image
+- Pull the MongoDB image
+- Create the required containers
+- Create a persistent MongoDB volume
+
+Services:
+
+* Node.js application
+* MongoDB database
+
+The API will be available at:
+
+```text
+http://localhost:3000
+```
+
+Swagger UI:
+
+```text
+http://localhost:3000/api-docs
+```
+
+Stop the containers:
+
+```bash
+docker compose down
+```
+
+---
+
+## Current Status
+
+Implemented:
+
+* User registration
+* Login
+* JWT authentication
+* Protected profile route
+* Profile update route
+* MongoDB connection
+* Swagger documentation
+* Automated tests with Jest and Supertest
+* Dockerfile
+* Docker Compose setup
+
+Planned improvements:
+- Metrics endpoint
+- Refresh token flow
+- Password reset flow
+- Role-based access control (RBAC)
 
 ---
 
@@ -199,27 +283,6 @@ Authorization: Bearer YOUR_JWT_TOKEN
 
 ---
 
-## Current Status
-
-Implemented:
-
-* User registration
-* Login
-* JWT authentication
-* Protected profile route
-* Profile update route
-* MongoDB connection
-* Swagger documentation
-
-Planned improvements:
-
-* Automated tests with Jest and Supertest
-* Docker support
-* Health and metrics endpoints
-* Refresh token flow
-* Password reset flow
-
----
 
 ## Author
 
