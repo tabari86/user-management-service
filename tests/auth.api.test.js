@@ -7,7 +7,10 @@ beforeAll(async () => {
   process.env.JWT_SECRET = process.env.JWT_SECRET || "test_jwt_secret";
 
   if (mongoose.connection.readyState === 0) {
-    await mongoose.connect("mongodb://127.0.0.1:27017/user-management-test");
+    await mongoose.connect(
+  process.env.MONGODB_URI ||
+    "mongodb://127.0.0.1:27017/user-management-test"
+);
   }
 });
 

@@ -10,6 +10,7 @@
 ![Jest](https://img.shields.io/badge/Jest-Testing-red?logo=jest)
 ![Supertest](https://img.shields.io/badge/Supertest-API_Tests-lightgrey)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-CI-blue?logo=githubactions)
 
 
 --- 
@@ -58,6 +59,7 @@ http://localhost:3000/api-docs
 | Automated Tests     | API testing with Jest and Supertest                 |
 | Integration Testing | Endpoint validation and authentication flow testing |
 | Docker Support      | Containerized application and database              |
+| CI/CD Pipeline      | Automated test execution with GitHub Actions        |
 
 
 
@@ -77,7 +79,8 @@ http://localhost:3000/api-docs
 * Supertest
 * Docker
 * Docker Compose
-* dotenv
+* dotenv   
+* GitHub Actions
 
 
 ---
@@ -206,6 +209,19 @@ Stop the containers:
 ```bash
 docker compose down
 ```
+## Continuous Integration (CI)
+
+This project uses GitHub Actions to automatically run the test suite on every push and pull request to the main branch.
+
+Workflow steps:
+
+* Checkout repository
+* Setup Node.js
+* Install dependencies
+* Start MongoDB service
+* Run Jest and Supertest tests
+
+This helps ensure that new changes do not break existing functionality.
 
 ---
 
@@ -223,6 +239,7 @@ Implemented:
 * Automated tests with Jest and Supertest
 * Dockerfile
 * Docker Compose setup
+* GitHub Actions CI workflow
 
 Planned improvements:
 - Metrics endpoint
