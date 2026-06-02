@@ -1,149 +1,234 @@
-## User Management Service
+# User Management Service
 
-Ein leichtgewichtiger, modular aufgebauter REST-Service für Benutzerverwaltung, Authentifizierung und Autorisierung.
-Der Service wurde mit Node.js, Express, MongoDB und JWT entwickelt und bietet eine klare Struktur aus Models, Controllers, Routes und Middleware.
+![Node.js](https://img.shields.io/badge/Node.js-22-green?logo=nodedotjs)
+![Express](https://img.shields.io/badge/Express-API-black?logo=express)
+![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-green?logo=mongodb)
+![JWT](https://img.shields.io/badge/JWT-Authentication-orange)
+![bcrypt](https://img.shields.io/badge/bcrypt-Password_Hashing-blue)
+![Swagger](https://img.shields.io/badge/OpenAPI-3.0-brightgreen)
+![REST API](https://img.shields.io/badge/REST-API-red)
 
-Die API eignet sich als Basiskomponente für größere Backend-Projekte, Microservices oder als Lernprojekt zur Vertiefung moderner Backend-Architektur.
+A lightweight REST API for user registration, login, JWT authentication and protected user profile management.
 
-## Features
+---
 
-Registrierung neuer Benutzer (mit Passwort-Hashing via bcrypt)
-Sicheres Login mit JWT-Token-Generierung
-Authentifizierung per Bearer Token (JWT)
-Geschützte Routen wie /users/me
-Benutzer-Update (nur eigene Daten)
-Klare Projektstruktur (controllers/models/routes/middleware)
-Verbindung zu MongoDB (lokal oder Atlas)
+## About the Project
 
-## Technologien
+User Management Service is a backend service built with Node.js, Express, MongoDB and JWT.
 
-Node.js
-Express
-MongoDB / Mongoose
-bcrypt für Passwort-Hashing
-jsonwebtoken für Authentifizierung
-dotenv für Umgebungskonfiguration
+The project demonstrates a clean authentication flow with user registration, password hashing, login, JWT token generation and protected user profile routes.
 
-## Projektstruktur
+It follows a modular backend structure using controllers, routes, middleware and models.
 
-user-management-service/
-│── controllers/
-│   ├── authController.js
-│   └── userController.js
-│
-│── middleware/
-│   └── authMiddleware.js
-│
-│── models/
-│   └── user.js
-│
-│── routes/
-│   ├── authRoutes.js
-│   └── userRoutes.js
-│
-│── .env
-│── index.js
-│── package.json
-│── README.md
+---
 
+## Swagger Documentation
 
-##  .env Beispiel
+Swagger UI is available after starting the application:
 
-PORT=3000
-MONGODB_URI=mongodb://127.0.0.1:27017/user-management
-JWT_SECRET=supergeheimesJWTpasswort123
+```text
+http://localhost:3000/api-docs
+```
 
- ## Beispiel-Requests (Postman)    
-# Registrieren
-POST http://localhost:3000/auth/register
-{
-  "name": "Test User",
-  "email": "test@example.com",
-  "password": "meinpasswort123"
-}
+### Swagger Preview
 
-# Login
-POST http://localhost:3000/auth/login
-{
-  "email": "test@example.com",
-  "password": "meinpasswort123"
-}
+![Swagger UI](docs/swagger-ui.png)
 
-# Response:
-{
-  "token": "JWT_TOKEN_HIER...",
-  "user": {
-    "_id": "...",
-    "email": "test@example.com",
-    "name": "Test User",
-    "role": "user"
-  }
-}
-
-# Eigene Daten abrufen
-GET http://localhost:3000/users/me
-Header:
-Authorization: Bearer <JWT_TOKEN>
-
-
-
-
-#  # User Management Service (EN)
-
-A lightweight and modular REST service for user registration, authentication and authorization.
-Built with Node.js, Express, MongoDB, and JWT, the service provides a clean architecture following the Controller–Model–Route pattern.
-
-This project can be used as a standalone microservice, a backend learning project, or a foundational user authentication layer for larger systems.
-
+---
 
 ## Features
 
-User registration with bcrypt password hashing
-Secure login with JWT token generation
-Authentication via Bearer Token
-Protected routes like /users/me
-Update own user profile
-Clean folder structure (controllers/models/routes/middleware)
-MongoDB connection (local or Atlas)
+| Feature            | Description                        |
+| ------------------ | ---------------------------------- |
+| User Registration  | Create a new user account          |
+| Password Hashing   | Passwords are hashed with bcrypt   |
+| Login              | Authenticate user credentials      |
+| JWT Authentication | Generate and validate JWT tokens   |
+| Protected Routes   | Access user data with Bearer Token |
+| User Profile       | Get current authenticated user     |
+| Profile Update     | Update own profile data            |
+| MongoDB            | Store user data persistently       |
+| Swagger/OpenAPI    | Interactive API documentation      |
+
+---
 
 ## Tech Stack
-Node.js
-Express
-MongoDB / Mongoose
-bcrypt
-jsonwebtoken
-dotenv
 
- ## Example Requests
+* Node.js
+* Express.js
+* MongoDB
+* Mongoose
+* JWT
+* bcrypt
+* Swagger / OpenAPI
+* dotenv
 
-# Register
-POST /auth/register
-{
-  "name": "Test User",
-  "email": "test@example.com",
-  "password": "12345678"
-}
+---
 
-# Login
-POST /auth/login
-{
-  "email": "test@example.com",
-  "password": "12345678"
-}
+## API Endpoints
 
-# Get Current User
-Authorization: Bearer <token>
+| Method | Endpoint         | Description                 | Auth         |
+| ------ | ---------------- | --------------------------- | ------------ |
+| POST   | `/auth/register` | Register a new user         | No           |
+| POST   | `/auth/login`    | Login and receive JWT token | No           |
+| GET    | `/users/me`      | Get current user profile    | Bearer Token |
+| PUT    | `/users/me`      | Update current user profile | Bearer Token |
 
+---
 
+## Project Structure
 
+```text
+user-management-service/
+├── controllers/
+│   ├── authController.js
+│   └── userController.js
+├── docs/
+│   └── swagger-ui.png
+├── middleware/
+│   └── authMiddleware.js
+├── models/
+│   └── user.js
+├── routes/
+│   ├── authRoutes.js
+│   └── userRoutes.js
+├── swagger/
+│   └── userSwagger.js
+├── .env.example
+├── index.js
+├── package.json
+├── package-lock.json
+└── README.md
+```
 
+---
 
+## Environment Variables
 
+Create a local `.env` file based on `.env.example`.
 
+```env
+PORT=3000
+MONGODB_URI=mongodb://127.0.0.1:27017/user-management
+JWT_SECRET=your_jwt_secret_here
+```
 
+---
 
+## Installation
 
+```bash
+git clone https://github.com/tabari86/user-management-service.git
+cd user-management-service
+npm install
+```
 
+---
 
+## Run the Application
 
+Make sure MongoDB is running locally.
 
+```bash
+npm start
+```
+
+Server:
+
+```text
+http://localhost:3000
+```
+
+Swagger UI:
+
+```text
+http://localhost:3000/api-docs
+```
+
+---
+
+## Example Requests
+
+### Register
+
+```bash
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d "{\"name\":\"Test User\",\"email\":\"testuser@example.com\",\"password\":\"test123456\"}"
+```
+
+### Login
+
+```bash
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"testuser@example.com\",\"password\":\"test123456\"}"
+```
+
+### Get Current User
+
+```bash
+curl http://localhost:3000/users/me \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+---
+
+## Authentication Flow
+
+1. A user registers with email, password and name.
+2. The password is hashed with bcrypt.
+3. The user logs in with email and password.
+4. The API returns a JWT token.
+5. Protected routes require:
+
+```http
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+---
+
+## Security Notes
+
+* Passwords are never stored as plain text.
+* Passwords are hashed with bcrypt.
+* Protected routes require a valid JWT token.
+* Secret values are stored in `.env`.
+* Only `.env.example` is committed to the repository.
+
+---
+
+## Current Status
+
+Implemented:
+
+* User registration
+* Login
+* JWT authentication
+* Protected profile route
+* Profile update route
+* MongoDB connection
+* Swagger documentation
+
+Planned improvements:
+
+* Automated tests with Jest and Supertest
+* Docker support
+* Health and metrics endpoints
+* Refresh token flow
+* Password reset flow
+
+---
+
+## Author
+
+**Moj Tabari**
+
+Website : 
+https://mtintelligence.ai
+
+GitHub:
+https://github.com/tabari86
+
+LinkedIn:
+https://www.linkedin.com/in/mojtaba-tabari
