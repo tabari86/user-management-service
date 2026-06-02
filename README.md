@@ -38,18 +38,19 @@ http://localhost:3000/api-docs
 
 ## Features
 
-| Feature            | Description                        |
-| ------------------ | ---------------------------------- |
-| User Registration  | Create a new user account          |
-| Password Hashing   | Passwords are hashed with bcrypt   |
-| Login              | Authenticate user credentials      |
-| JWT Authentication | Generate and validate JWT tokens   |
-| Protected Routes   | Access user data with Bearer Token |
-| User Profile       | Get current authenticated user     |
-| Profile Update     | Update own profile data            |
-| MongoDB            | Store user data persistently       |
-| Swagger/OpenAPI    | Interactive API documentation      |
-
+| Feature                             | Description                         |
+| ------------------  | ----------------------------------------------------|
+| User Registration   | Create a new user account                           |
+| Password Hashing    | Passwords are hashed with bcrypt                    |
+| Login               | Authenticate user credentials                       |
+| JWT Authentication  | Generate and validate JWT tokens                    |
+| Protected Routes    | Access user data with Bearer Token                  |
+| User Profile        | Get current authenticated user                      |
+| Profile Update      | Update own profile data                             |
+| MongoDB             | Store user data persistently                        |
+| Swagger/OpenAPI     | Interactive API documentation                       |
+| Automated Tests     | API testing with Jest and Supertest                 |
+| Integration Testing | Endpoint validation and authentication flow testing |
 ---
 
 ## Tech Stack
