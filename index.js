@@ -17,8 +17,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI;
 
+
+//  Import swagger
+const setupSwagger = require("./swagger/userSwagger");
+
 // 5) Middleware: JSON-Body parsen
 app.use(express.json());
+
+// 
+setupSwagger(app);
 
 // Auth-Routen
 app.use("/auth", authRoutes);
