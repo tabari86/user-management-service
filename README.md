@@ -100,6 +100,9 @@ http://localhost:3000/api-docs
 
 ```text
 user-management-service/
+├──github/
+│  └── workflows/
+│      └── test.yml
 ├── controllers/
 │   ├── authController.js
 │   └── userController.js
