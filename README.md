@@ -1,5 +1,7 @@
 # User Management Service
 
+
+![CI](https://github.com/tabari86/invoice-api/actions/workflows/ci.yml/badge.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-22-green?logo=nodedotjs)
 ![Express](https://img.shields.io/badge/Express-API-black?logo=express)
 ![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-green?logo=mongodb)
@@ -89,20 +91,20 @@ http://localhost:3000/api-docs
 
 | Method | Endpoint         | Description                 | Auth         |
 | ------ | ---------------- | --------------------------- | ------------ |
+| GET    | `/health`        | Check API service status    | No           |
 | POST   | `/auth/register` | Register a new user         | No           |
 | POST   | `/auth/login`    | Login and receive JWT token | No           |
 | GET    | `/users/me`      | Get current user profile    | Bearer Token |
 | PUT    | `/users/me`      | Update current user profile | Bearer Token |
-
 ---
 
 ## Project Structure
 
 ```text
 user-management-service/
-├──github/
-│  └── workflows/
-│      └── test.yml
+├── .github/
+│   └── workflows/
+│       └── test.yml
 ├── controllers/
 │   ├── authController.js
 │   └── userController.js

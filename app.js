@@ -13,6 +13,13 @@ setupSwagger(app);
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
 
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    service: "user-management-service",
+  });
+});
+
 app.get("/", (req, res) => {
   res.send("User Management Service API läuft 🚀");
 });
