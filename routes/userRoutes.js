@@ -5,12 +5,168 @@ const router = express.Router();
 
 const userController = require("../controllers/userController");
 const authMiddleware = require("../middleware/authMiddleware");
+const requireRole = require("../middleware/requireRole");
+
+
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: List all users
+ *     description: Returns all user accounts. This endpoint is restricted to users with the admin role.
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Users returned successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: 65f1c2a9b7a7c91234567890
+ *                       email:
+ *                         type: string
+ *                         example: user@example.com
+ *                       name:
+ *                         type: string
+ *                         example: Test User
+ *                       role:
+ *                         type: string
+ *                         example: user
+ *                       status:
+ *                         type: string
+ *                         example: active
+ *                       statusChangedAt:
+ *                         type: string
+ *                         format: date-time
+ *                       disabledAt:
+ *                         type: string
+ *                         format: date-time
+ *                         nullable: true
+ *                       activatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         nullable: true
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *       401:
+ *         description: Missing, invalid or expired JWT token
+ *       403:
+ *         description: Admin role required
+ *       500:
+ *         description: Internal server error
+ */
+router.get("/", authMiddleware, requireRole("admin"), userController.listUsers);
+
+/**
+ * @swagger
+ * /users/{id}/status:
+ *   patch:
+ *     summary: Update user account status
+ *     description: Activates or disables a user account. This endpoint is restricted to users with the admin role.
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [active, disabled]
+ *                 example: disabled
+ *     responses:
+ *       200:
+ *         description: User status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Benutzerstatus aktualisiert
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: 65f1c2a9b7a7c91234567890
+ *                     email:
+ *                       type: string
+ *                       example: user@example.com
+ *                     name:
+ *                       type: string
+ *                       example: Test User
+ *                     role:
+ *                       type: string
+ *                       example: user
+ *                     status:
+ *                       type: string
+ *                       enum: [active, disabled]
+ *                       example: disabled
+ *                     statusChangedAt:
+ *                       type: string
+ *                       format: date-time
+ *                     statusChangedBy:
+ *                       type: string
+ *                       example: 65f1c2a9b7a7c91234567891
+ *                     disabledAt:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                     activatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Invalid status value
+ *       401:
+ *         description: Missing, invalid or expired JWT token
+ *       403:
+ *         description: Admin role required
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+router.patch(
+    "/:id/status",
+    authMiddleware,
+    requireRole("admin"),
+    userController.updateUserStatus
+);
 
 /**
  * @swagger
  * tags:
  *   name: Users
- *   description: Protected user profile routes
+ *   description: User profile and admin user management routes
  */
 
 /**

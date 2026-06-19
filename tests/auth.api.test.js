@@ -76,6 +76,7 @@ describe("Authentication API", () => {
       expect(res.body.email).toBe("register@example.com");
       expect(res.body.name).toBe("Register User");
       expect(res.body.role).toBe("user");
+      expect(res.body.status).toBe("active");
       expect(res.body.passwordHash).toBeUndefined();
       expect(res.body.createdAt).toBeDefined();
     });
@@ -121,6 +122,7 @@ describe("Authentication API", () => {
       expect(res.body.token).toBeDefined();
       expect(res.body.user.email).toBe("login@example.com");
       expect(res.body.user.role).toBe("user");
+      expect(res.body.user.status).toBe("active");
       expect(res.body.user.passwordHash).toBeUndefined();
     });
 
@@ -157,6 +159,27 @@ describe("Authentication API", () => {
       expect(res.statusCode).toBe(401);
       expect(res.body.message).toBeDefined();
     });
+
+    test("rejects login for a disabled user", async () => {
+  await registerUser({
+    email: "disabled@example.com",
+    password: "test123456",
+  });
+
+  await User.findOneAndUpdate(
+    { email: "disabled@example.com" },
+    { status: "disabled" }
+  );
+
+  const res = await loginUser({
+    email: "disabled@example.com",
+    password: "test123456",
+  });
+
+  expect(res.statusCode).toBe(403);
+  expect(res.body.message).toBe("Benutzerkonto ist deaktiviert");
+  expect(res.body.token).toBeUndefined();
+});
   });
 });
 

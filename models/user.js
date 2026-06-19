@@ -23,6 +23,28 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "admin"],
       default: "user",
     },
+    status: {
+      type: String,
+      enum: ["active", "disabled"],
+      default: "active",
+    },
+    statusChangedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    statusChangedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    disabledAt: {
+      type: Date,
+      default: null,
+    },
+    activatedAt: {
+      type: Date,
+      default: Date.now,
+    },
     createdAt: {
       type: Date,
       default: Date.now,
@@ -30,7 +52,7 @@ const userSchema = new mongoose.Schema(
   },
   {
     versionKey: false,
-  }
+  },
 );
 
 const User = mongoose.model("User", userSchema);

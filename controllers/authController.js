@@ -37,6 +37,7 @@ exports.register = async (req, res) => {
       email: savedUser.email,
       name: savedUser.name,
       role: savedUser.role,
+      status: savedUser.status,
       createdAt: savedUser.createdAt,
     });
   } catch (err) {
@@ -63,14 +64,18 @@ exports.login = async (req, res) => {
         .json({ message: "E-Mail oder Passwort ist ungültig" });
     }
 
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch) {
-      return res
-        .status(401)
-        .json({ message: "E-Mail oder Passwort ist ungültig" });
-    }
+const isMatch = await bcrypt.compare(password, user.passwordHash);
+if (!isMatch) {
+  return res
+    .status(401)
+    .json({ message: "E-Mail oder Passwort ist ungültig" });
+}
 
-    const token = jwt.sign(
+if (user.status === "disabled") {
+  return res.status(403).json({ message: "Benutzerkonto ist deaktiviert" });
+}
+
+const token = jwt.sign(
       {
         userId: user._id,
         role: user.role,
@@ -86,6 +91,7 @@ exports.login = async (req, res) => {
         email: user.email,
         name: user.name,
         role: user.role,
+         status: user.status,
       },
     });
   } catch (err) {

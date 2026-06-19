@@ -2,6 +2,72 @@
 
 const User = require("../models/user");
 
+// GET /users
+exports.listUsers = async (req, res) => {
+  try {
+    const users = await User.find()
+      .select("-passwordHash")
+      .sort({ createdAt: -1 });
+
+    res.json({
+      users,
+    });
+  } catch (err) {
+    console.error("Fehler bei listUsers:", err);
+    res.status(500).json({ message: "Interner Serverfehler" });
+  }
+};
+
+// PATCH /users/:id/status
+exports.updateUserStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    if (!["active", "disabled"].includes(status)) {
+      return res.status(400).json({
+        message: "status muss active oder disabled sein",
+      });
+    }
+
+    const now = new Date();
+
+    const updateData = {
+      status,
+      statusChangedAt: now,
+      statusChangedBy: req.user.id,
+    };
+
+    if (status === "disabled") {
+      updateData.disabledAt = now;
+    }
+
+    if (status === "active") {
+      updateData.activatedAt = now;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      {
+        new: true,
+        select: "-passwordHash",
+      }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "Benutzer nicht gefunden" });
+    }
+
+    res.json({
+      message: "Benutzerstatus aktualisiert",
+      user: updatedUser,
+    });
+  } catch (err) {
+    console.error("Fehler bei updateUserStatus:", err);
+    res.status(500).json({ message: "Interner Serverfehler" });
+  }
+};
+
 // GET /users/me
 exports.getMe = async (req, res) => {
   try {
