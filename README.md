@@ -31,6 +31,30 @@ It follows a modular backend structure using controllers, routes, middleware and
 
 ---
 
+## Live Deployment
+
+The API is deployed on Render and can be accessed here:
+
+```text
+https://user-management-service-1jgc.onrender.com
+```
+
+Health check:
+
+```text
+https://user-management-service-1jgc.onrender.com/health
+```
+
+Swagger API documentation:
+
+```text
+https://user-management-service-1jgc.onrender.com/api-docs
+```
+
+Note: The service is hosted on Render's free tier. The first request after a period of inactivity may take a little longer because the service can spin down when idle.
+
+---
+
 ## Swagger Documentation
 
 Swagger UI is available after starting the application:
