@@ -216,6 +216,36 @@ describe("User Profile API", () => {
       expect(res.body.name).toBe("Protected User");
       expect(res.body.passwordHash).toBeUndefined();
     });
+
+    test("returns 404 when token user no longer exists", async () => {
+      const { token, user } = await createAuthenticatedUser({
+        email: "deleted-token-user@example.com",
+      });
+
+      await User.findByIdAndDelete(user._id);
+
+      const res = await request(app)
+        .get("/users/me")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(res.statusCode).toBe(404);
+      expect(res.body.message).toBe("Benutzer nicht gefunden");
+    });
+
+    test("rejects profile access for a disabled user with an existing token", async () => {
+      const { token, user } = await createAuthenticatedUser({
+        email: "disabled-profile-access@example.com",
+      });
+
+      await User.findByIdAndUpdate(user._id, { status: "disabled" });
+
+      const res = await request(app)
+        .get("/users/me")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(res.statusCode).toBe(403);
+      expect(res.body.message).toBe("Benutzerkonto ist deaktiviert");
+    });
   });
 
   describe("PUT /users/me", () => {
@@ -261,6 +291,24 @@ describe("User Profile API", () => {
 
       expect(res.statusCode).toBe(401);
       expect(res.body.message).toBeDefined();
+    });
+
+    test("rejects profile update for a disabled user with an existing token", async () => {
+      const { token, user } = await createAuthenticatedUser({
+        email: "disabled-profile-update@example.com",
+      });
+
+      await User.findByIdAndUpdate(user._id, { status: "disabled" });
+
+      const res = await request(app)
+        .put("/users/me")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          name: "Blocked Update",
+        });
+
+      expect(res.statusCode).toBe(403);
+      expect(res.body.message).toBe("Benutzerkonto ist deaktiviert");
     });
 
     test.each([

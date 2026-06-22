@@ -1,35 +1,45 @@
 // middleware/authMiddleware.js
 const jwt = require("jsonwebtoken");
+const User = require("../models/user");
 
-function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
 
-  // Prüfen, ob ein Authorization-Header im Format "Bearer <token>" vorhanden ist
+  // Check if an Authorization header in the format "Bearer <token>" is present
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res
       .status(401)
       .json({ message: "Kein Token vorhanden oder falsches Format" });
   }
 
-  // "Bearer " entfernen und Token extrahieren
+  // Remove "Bearer " and extract token
   const rawToken = authHeader.slice(7).trim();
 
-  // Anführungszeichen am Anfang/Ende entfernen, falls z.B. "token" gesendet wurde
+  // Remove surrounding quotes if a token was sent as "token"
   const token = rawToken.replace(/^"|"$/g, "");
 
   try {
-    // Token prüfen und Payload auslesen
+    // Verify token and read payload
     const payload = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Daten des eingeloggten Nutzers im Request-Objekt speichern
+    const user = await User.findById(payload.userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "Benutzer nicht gefunden" });
+    }
+
+    if (user.status === "disabled") {
+      return res.status(403).json({ message: "Benutzerkonto ist deaktiviert" });
+    }
+
+    // Store authenticated user data from the database, not only from the token
     req.user = {
-      id: payload.userId,
-      role: payload.role,
+      id: user._id.toString(),
+      role: user.role,
     };
 
     return next();
   } catch (err) {
-    // Bei ungültigem oder abgelaufenem Token eine einheitliche Fehlermeldung zurückgeben
     return res
       .status(401)
       .json({ message: "Ungültiger oder abgelaufener Token" });

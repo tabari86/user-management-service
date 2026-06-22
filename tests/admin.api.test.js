@@ -96,6 +96,37 @@ describe("Admin User Management API", () => {
             expect(res.statusCode).toBe(403);
             expect(res.body.message).toBe("Zugriff verweigert");
         });
+        test("rejects requests from a disabled admin with an existing token", async () => {
+            const { token, user } = await createAuthenticatedUser({
+                email: "disabled-admin-list@example.com",
+                role: "admin",
+            });
+
+            await User.findByIdAndUpdate(user._id, { status: "disabled" });
+
+            const res = await request(app)
+                .get("/users")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(res.statusCode).toBe(403);
+            expect(res.body.message).toBe("Benutzerkonto ist deaktiviert");
+        });
+
+        test("uses the current user role from the database instead of the token payload", async () => {
+            const { token, user } = await createAuthenticatedUser({
+                email: "downgraded-admin@example.com",
+                role: "admin",
+            });
+
+            await User.findByIdAndUpdate(user._id, { role: "user" });
+
+            const res = await request(app)
+                .get("/users")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(res.statusCode).toBe(403);
+            expect(res.body.message).toBe("Zugriff verweigert");
+        });
 
         test("allows admins to list users without exposing passwordHash", async () => {
             const { token } = await createAuthenticatedUser({
@@ -164,6 +195,29 @@ describe("Admin User Management API", () => {
 
             expect(res.statusCode).toBe(403);
             expect(res.body.message).toBe("Zugriff verweigert");
+        });
+
+        test("rejects status changes from a disabled admin with an existing token", async () => {
+            const { token, user: admin } = await createAuthenticatedUser({
+                email: "disabled-admin-status@example.com",
+                role: "admin",
+            });
+
+            const targetUser = await User.create({
+                name: "Target User",
+                email: "target-disabled-admin-status@example.com",
+                passwordHash: "hashed-password",
+            });
+
+            await User.findByIdAndUpdate(admin._id, { status: "disabled" });
+
+            const res = await request(app)
+                .patch(`/users/${targetUser._id}/status`)
+                .set("Authorization", `Bearer ${token}`)
+                .send({ status: "disabled" });
+
+            expect(res.statusCode).toBe(403);
+            expect(res.body.message).toBe("Benutzerkonto ist deaktiviert");
         });
 
         test("rejects invalid account status", async () => {
