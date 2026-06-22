@@ -51,7 +51,7 @@ beforeAll(async () => {
   if (mongoose.connection.readyState === 0) {
     await mongoose.connect(
       process.env.MONGODB_URI ||
-        "mongodb://127.0.0.1:27017/user-management-test"
+      "mongodb://127.0.0.1:27017/user-management-test"
     );
   }
 });
@@ -161,25 +161,25 @@ describe("Authentication API", () => {
     });
 
     test("rejects login for a disabled user", async () => {
-  await registerUser({
-    email: "disabled@example.com",
-    password: "test123456",
-  });
+      await registerUser({
+        email: "disabled@example.com",
+        password: "test123456",
+      });
 
-  await User.findOneAndUpdate(
-    { email: "disabled@example.com" },
-    { status: "disabled" }
-  );
+      await User.findOneAndUpdate(
+        { email: "disabled@example.com" },
+        { status: "disabled" }
+      );
 
-  const res = await loginUser({
-    email: "disabled@example.com",
-    password: "test123456",
-  });
+      const res = await loginUser({
+        email: "disabled@example.com",
+        password: "test123456",
+      });
 
-  expect(res.statusCode).toBe(403);
-  expect(res.body.message).toBe("Benutzerkonto ist deaktiviert");
-  expect(res.body.token).toBeUndefined();
-});
+      expect(res.statusCode).toBe(403);
+      expect(res.body.message).toBe("Benutzerkonto ist deaktiviert");
+      expect(res.body.token).toBeUndefined();
+    });
   });
 });
 
@@ -278,6 +278,128 @@ describe("User Profile API", () => {
 
       expect(res.statusCode).toBe(400);
       expect(res.body.message).toBeDefined();
+    });
+  });
+
+  describe("PATCH /users/me/password", () => {
+    test("rejects password change without token", async () => {
+      const res = await request(app).patch("/users/me/password").send({
+        currentPassword: "test123456",
+        newPassword: "newPassword123",
+      });
+
+      expect(res.statusCode).toBe(401);
+      expect(res.body.message).toBeDefined();
+    });
+
+    test.each([
+      ["currentPassword", { newPassword: "newPassword123" }],
+      ["newPassword", { currentPassword: "test123456" }],
+    ])("rejects password change without %s", async (_field, payload) => {
+      const { token } = await createAuthenticatedUser({
+        email: "missing-password-field@example.com",
+      });
+
+      const res = await request(app)
+        .patch("/users/me/password")
+        .set("Authorization", `Bearer ${token}`)
+        .send(payload);
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toBe(
+        "currentPassword und newPassword sind erforderlich"
+      );
+    });
+
+    test("rejects a short new password", async () => {
+      const { token } = await createAuthenticatedUser({
+        email: "short-password@example.com",
+      });
+
+      const res = await request(app)
+        .patch("/users/me/password")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          currentPassword: "test123456",
+          newPassword: "short",
+        });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toBe(
+        "newPassword muss mindestens 8 Zeichen lang sein"
+      );
+    });
+
+    test("rejects password change with wrong current password", async () => {
+      const { token } = await createAuthenticatedUser({
+        email: "wrong-current-password@example.com",
+      });
+
+      const res = await request(app)
+        .patch("/users/me/password")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          currentPassword: "wrong-password",
+          newPassword: "newPassword123",
+        });
+
+      expect(res.statusCode).toBe(401);
+      expect(res.body.message).toBe("Aktuelles Passwort ist ungültig");
+    });
+
+    test("rejects password change for a disabled user", async () => {
+      const { token, user } = await createAuthenticatedUser({
+        email: "disabled-password-change@example.com",
+      });
+
+      await User.findByIdAndUpdate(user._id, { status: "disabled" });
+
+      const res = await request(app)
+        .patch("/users/me/password")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          currentPassword: "test123456",
+          newPassword: "newPassword123",
+        });
+
+      expect(res.statusCode).toBe(403);
+      expect(res.body.message).toBe("Benutzerkonto ist deaktiviert");
+    });
+
+    test("updates password and requires the new password for future login", async () => {
+      const email = "change-password@example.com";
+
+      const { token } = await createAuthenticatedUser({
+        email,
+        password: "oldPassword123",
+      });
+
+      const res = await request(app)
+        .patch("/users/me/password")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          currentPassword: "oldPassword123",
+          newPassword: "newPassword123",
+        });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.message).toBe("Passwort aktualisiert");
+      expect(res.body.passwordHash).toBeUndefined();
+
+      const oldLoginRes = await loginUser({
+        email,
+        password: "oldPassword123",
+      });
+
+      expect(oldLoginRes.statusCode).toBe(401);
+
+      const newLoginRes = await loginUser({
+        email,
+        password: "newPassword123",
+      });
+
+      expect(newLoginRes.statusCode).toBe(200);
+      expect(newLoginRes.body.token).toBeDefined();
     });
   });
 });

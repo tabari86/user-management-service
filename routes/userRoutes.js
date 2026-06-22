@@ -70,6 +70,55 @@ router.get("/", authMiddleware, requireRole("admin"), userController.listUsers);
 
 /**
  * @swagger
+ * /users/me/password:
+ *   patch:
+ *     summary: Change current user password
+ *     description: Updates the password of the currently authenticated user after validating the current password.
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 example: oldPassword123
+ *               newPassword:
+ *                 type: string
+ *                 example: newPassword123
+ *     responses:
+ *       200:
+ *         description: Password updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Passwort aktualisiert
+ *       400:
+ *         description: Missing password fields or invalid new password
+ *       401:
+ *         description: Missing, invalid or expired JWT token, or invalid current password
+ *       403:
+ *         description: User account is disabled
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+router.patch("/me/password", authMiddleware, userController.changePassword);
+
+/**
+ * @swagger
  * /users/{id}/status:
  *   patch:
  *     summary: Update user account status

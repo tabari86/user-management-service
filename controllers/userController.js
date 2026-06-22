@@ -1,6 +1,7 @@
 // controllers/userController.js
 
 const User = require("../models/user");
+const bcrypt = require("bcrypt");
 
 // GET /users
 exports.listUsers = async (req, res) => {
@@ -14,6 +15,52 @@ exports.listUsers = async (req, res) => {
     });
   } catch (err) {
     console.error("Fehler bei listUsers:", err);
+    res.status(500).json({ message: "Interner Serverfehler" });
+  }
+};
+
+// PATCH /users/me/password
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        message: "currentPassword und newPassword sind erforderlich",
+      });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        message: "newPassword muss mindestens 8 Zeichen lang sein",
+      });
+    }
+
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ message: "Benutzer nicht gefunden" });
+    }
+
+    if (user.status === "disabled") {
+      return res.status(403).json({ message: "Benutzerkonto ist deaktiviert" });
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.passwordHash
+    );
+
+    if (!isCurrentPasswordValid) {
+      return res.status(401).json({ message: "Aktuelles Passwort ist ungültig" });
+    }
+
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.json({ message: "Passwort aktualisiert" });
+  } catch (err) {
+    console.error("Fehler bei changePassword:", err);
     res.status(500).json({ message: "Interner Serverfehler" });
   }
 };

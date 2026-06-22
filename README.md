@@ -120,8 +120,11 @@ http://localhost:3000/api-docs
 | POST   | `/auth/login`         | Login and receive JWT token              | No           |
 | GET    | `/users/me`           | Get current user profile                 | Bearer Token |
 | PUT    | `/users/me`           | Update current user profile              | Bearer Token |
+| PATCH  | `/users/me/password`  | Change current user password             | Bearer Token |
 | GET    | `/users`              | List all users                           | Admin only   |
 | PATCH  | `/users/:id/status`   | Activate or disable a user account       | Admin only   |
+
+
 ---
 
 ## Project Structure
