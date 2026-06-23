@@ -1,15 +1,32 @@
 process.env.JWT_SECRET = process.env.JWT_SECRET || "test_jwt_secret";
+process.env.APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3000";
+process.env.PASSWORD_RESET_TOKEN_EXPIRY_MINUTES =
+  process.env.PASSWORD_RESET_TOKEN_EXPIRY_MINUTES || "15";
+
+jest.mock("../services/emailService", () => ({
+  sendPasswordResetEmail: jest.fn(),
+}));
 
 const request = require("supertest");
 const mongoose = require("mongoose");
+const crypto = require("crypto");
 const app = require("../app");
 const User = require("../models/user");
+const { PASSWORD_POLICY_MESSAGE } = require("../utils/passwordPolicy");
+const { sendPasswordResetEmail } = require("../services/emailService");
+
+const PASSWORD_RESET_REQUEST_MESSAGE =
+  "Wenn ein Konto mit dieser E-Mail existiert, wurde ein Link zum Zuruecksetzen des Passworts gesendet";
+const INVALID_OR_EXPIRED_RESET_TOKEN_MESSAGE =
+  "Ungueltiger oder abgelaufener Reset-Token";
+const PASSWORD_RESET_SUCCESS_MESSAGE = "Passwort wurde zurueckgesetzt";
+const TEST_PASSWORD = "TestPassword123!";
 
 async function registerUser(overrides = {}) {
   const payload = {
     name: "Test User",
     email: "testuser@example.com",
-    password: "test123456",
+    password: TEST_PASSWORD,
     ...overrides,
   };
 
@@ -19,7 +36,7 @@ async function registerUser(overrides = {}) {
 async function loginUser(overrides = {}) {
   const payload = {
     email: "testuser@example.com",
-    password: "test123456",
+    password: TEST_PASSWORD,
     ...overrides,
   };
 
@@ -30,7 +47,7 @@ async function createAuthenticatedUser(overrides = {}) {
   const userData = {
     name: "Authenticated User",
     email: "authuser@example.com",
-    password: "test123456",
+    password: TEST_PASSWORD,
     ...overrides,
   };
 
@@ -47,6 +64,35 @@ async function createAuthenticatedUser(overrides = {}) {
   };
 }
 
+async function createPasswordResetToken(overrides = {}) {
+  const userData = {
+    name: "Password Reset User",
+    email: "password-reset-user@example.com",
+    password: TEST_PASSWORD,
+    ...overrides,
+  };
+
+  await registerUser(userData);
+
+  sendPasswordResetEmail.mockResolvedValueOnce({ messageId: "test-message" });
+
+  const forgotPasswordRes = await request(app)
+    .post("/auth/forgot-password")
+    .send({
+      email: userData.email,
+    });
+
+  const emailPayload = sendPasswordResetEmail.mock.calls[0][0];
+  const resetToken = new URL(emailPayload.resetLink).searchParams.get("token");
+
+  return {
+    forgotPasswordRes,
+    resetToken,
+    email: userData.email,
+    password: userData.password,
+  };
+}
+
 beforeAll(async () => {
   if (mongoose.connection.readyState === 0) {
     await mongoose.connect(
@@ -57,6 +103,7 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
+  jest.clearAllMocks();
   await User.deleteMany({});
 });
 
@@ -82,7 +129,7 @@ describe("Authentication API", () => {
     });
 
     test.each([
-      ["email", { password: "test123456" }],
+      ["email", { password: TEST_PASSWORD }],
       ["password", { email: "missing-password@example.com" }],
     ])("rejects registration without %s", async (_field, payload) => {
       const res = await request(app).post("/auth/register").send(payload);
@@ -103,6 +150,19 @@ describe("Authentication API", () => {
       expect(res.statusCode).toBe(409);
       expect(res.body.message).toBeDefined();
     });
+
+    test("rejects registration with a weak password", async () => {
+      const res = await registerUser({
+        email: "weak-register@example.com",
+        password: "weakpassword123",
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toBe(PASSWORD_POLICY_MESSAGE);
+
+      const user = await User.findOne({ email: "weak-register@example.com" });
+      expect(user).toBeNull();
+    });
   });
 
   describe("POST /auth/login", () => {
@@ -110,12 +170,12 @@ describe("Authentication API", () => {
       await registerUser({
         name: "Login User",
         email: "login@example.com",
-        password: "test123456",
+        password: TEST_PASSWORD,
       });
 
       const res = await loginUser({
         email: "login@example.com",
-        password: "test123456",
+        password: TEST_PASSWORD,
       });
 
       expect(res.statusCode).toBe(200);
@@ -127,7 +187,7 @@ describe("Authentication API", () => {
     });
 
     test.each([
-      ["email", { password: "test123456" }],
+      ["email", { password: TEST_PASSWORD }],
       ["password", { email: "missing-login-password@example.com" }],
     ])("rejects login without %s", async (_field, payload) => {
       const res = await request(app).post("/auth/login").send(payload);
@@ -148,7 +208,7 @@ describe("Authentication API", () => {
     test("rejects login with a wrong password", async () => {
       await registerUser({
         email: "wrong-password@example.com",
-        password: "correct-password",
+        password: "CorrectPassword123!",
       });
 
       const res = await loginUser({
@@ -163,7 +223,7 @@ describe("Authentication API", () => {
     test("rejects login for a disabled user", async () => {
       await registerUser({
         email: "disabled@example.com",
-        password: "test123456",
+        password: TEST_PASSWORD,
       });
 
       await User.findOneAndUpdate(
@@ -173,12 +233,259 @@ describe("Authentication API", () => {
 
       const res = await loginUser({
         email: "disabled@example.com",
-        password: "test123456",
+        password: TEST_PASSWORD,
       });
 
       expect(res.statusCode).toBe(403);
       expect(res.body.message).toBe("Benutzerkonto ist deaktiviert");
       expect(res.body.token).toBeUndefined();
+    });
+  });
+
+  describe("POST /auth/forgot-password", () => {
+    test("rejects password reset request without email", async () => {
+      const res = await request(app).post("/auth/forgot-password").send({});
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toBe("email ist erforderlich");
+      expect(sendPasswordResetEmail).not.toHaveBeenCalled();
+    });
+
+    test("returns a generic response for an unknown email", async () => {
+      const res = await request(app).post("/auth/forgot-password").send({
+        email: "unknown-reset@example.com",
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.message).toBe(PASSWORD_RESET_REQUEST_MESSAGE);
+      expect(sendPasswordResetEmail).not.toHaveBeenCalled();
+    });
+
+    test("rejects password reset request for a disabled user", async () => {
+      await registerUser({
+        email: "disabled-reset@example.com",
+        password: TEST_PASSWORD,
+      });
+
+      await User.findOneAndUpdate(
+        { email: "disabled-reset@example.com" },
+        { status: "disabled" }
+      );
+
+      const res = await request(app).post("/auth/forgot-password").send({
+        email: "disabled-reset@example.com",
+      });
+
+      expect(res.statusCode).toBe(403);
+      expect(res.body.message).toBe("Benutzerkonto ist deaktiviert");
+      expect(sendPasswordResetEmail).not.toHaveBeenCalled();
+    });
+
+    test("creates a reset token hash and sends a reset email for an active user", async () => {
+      await registerUser({
+        email: "active-reset@example.com",
+        password: TEST_PASSWORD,
+      });
+
+      sendPasswordResetEmail.mockResolvedValueOnce({ messageId: "test-message" });
+
+      const beforeRequest = Date.now();
+
+      const res = await request(app).post("/auth/forgot-password").send({
+        email: "active-reset@example.com",
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.message).toBe(PASSWORD_RESET_REQUEST_MESSAGE);
+      expect(res.body.token).toBeUndefined();
+      expect(res.body.resetToken).toBeUndefined();
+
+      expect(sendPasswordResetEmail).toHaveBeenCalledTimes(1);
+
+      const emailPayload = sendPasswordResetEmail.mock.calls[0][0];
+      expect(emailPayload.to).toBe("active-reset@example.com");
+      expect(emailPayload.resetLink).toContain(
+        "http://localhost:3000/reset-password?token="
+      );
+
+      const resetToken = new URL(emailPayload.resetLink).searchParams.get("token");
+      expect(resetToken).toBeDefined();
+
+      const expectedTokenHash = crypto
+        .createHash("sha256")
+        .update(resetToken)
+        .digest("hex");
+
+      const user = await User.findOne({ email: "active-reset@example.com" }).select(
+        "+passwordResetTokenHash +passwordResetExpiresAt"
+      );
+
+      expect(user.passwordResetTokenHash).toBe(expectedTokenHash);
+      expect(user.passwordResetExpiresAt).toBeInstanceOf(Date);
+
+      const expiresAt = user.passwordResetExpiresAt.getTime();
+      const minimumExpectedExpiry = beforeRequest + 14 * 60 * 1000;
+      const maximumExpectedExpiry = beforeRequest + 16 * 60 * 1000;
+
+      expect(expiresAt).toBeGreaterThanOrEqual(minimumExpectedExpiry);
+      expect(expiresAt).toBeLessThanOrEqual(maximumExpectedExpiry);
+    });
+
+    test("clears reset fields and returns 500 when email delivery fails", async () => {
+      const consoleErrorSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => { });
+
+      try {
+        await registerUser({
+          email: "email-failure-reset@example.com",
+          password: TEST_PASSWORD,
+        });
+
+        sendPasswordResetEmail.mockRejectedValueOnce(new Error("SMTP failed"));
+
+        const res = await request(app).post("/auth/forgot-password").send({
+          email: "email-failure-reset@example.com",
+        });
+
+        expect(res.statusCode).toBe(500);
+        expect(res.body.message).toBe("Interner Serverfehler");
+
+        const user = await User.findOne({
+          email: "email-failure-reset@example.com",
+        }).select("+passwordResetTokenHash +passwordResetExpiresAt");
+
+        expect(user.passwordResetTokenHash).toBeNull();
+        expect(user.passwordResetExpiresAt).toBeNull();
+      } finally {
+        consoleErrorSpy.mockRestore();
+      }
+    });
+  });
+
+  describe("POST /auth/reset-password", () => {
+    test.each([
+      ["token", { newPassword: "NewPassword123!" }],
+      ["newPassword", { token: "some-reset-token" }],
+    ])("rejects password reset without %s", async (_field, payload) => {
+      const res = await request(app).post("/auth/reset-password").send(payload);
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toBe("token und newPassword sind erforderlich");
+    });
+
+    test("rejects password reset with a weak new password", async () => {
+      const { resetToken } = await createPasswordResetToken({
+        email: "weak-reset-password@example.com",
+      });
+
+      const res = await request(app).post("/auth/reset-password").send({
+        token: resetToken,
+        newPassword: "weakpassword123",
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toBe(PASSWORD_POLICY_MESSAGE);
+    });
+
+    test("rejects password reset with an invalid token", async () => {
+      const res = await request(app).post("/auth/reset-password").send({
+        token: "invalid-reset-token",
+        newPassword: "NewPassword123!",
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toBe(INVALID_OR_EXPIRED_RESET_TOKEN_MESSAGE);
+    });
+
+    test("rejects password reset with an expired token", async () => {
+      await registerUser({
+        email: "expired-reset-token@example.com",
+        password: TEST_PASSWORD,
+      });
+
+      const resetToken = "expired-reset-token";
+      const resetTokenHash = crypto
+        .createHash("sha256")
+        .update(resetToken)
+        .digest("hex");
+
+      await User.findOneAndUpdate(
+        { email: "expired-reset-token@example.com" },
+        {
+          passwordResetTokenHash: resetTokenHash,
+          passwordResetExpiresAt: new Date(Date.now() - 60 * 1000),
+        }
+      );
+
+      const res = await request(app).post("/auth/reset-password").send({
+        token: resetToken,
+        newPassword: "NewPassword123!",
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toBe(INVALID_OR_EXPIRED_RESET_TOKEN_MESSAGE);
+    });
+
+    test("rejects password reset for a disabled user", async () => {
+      const { resetToken, email } = await createPasswordResetToken({
+        email: "disabled-reset-password@example.com",
+      });
+
+      await User.findOneAndUpdate({ email }, { status: "disabled" });
+
+      const res = await request(app).post("/auth/reset-password").send({
+        token: resetToken,
+        newPassword: "NewPassword123!",
+      });
+
+      expect(res.statusCode).toBe(403);
+      expect(res.body.message).toBe("Benutzerkonto ist deaktiviert");
+    });
+
+    test("resets password, clears reset fields and allows login with the new password", async () => {
+      const { resetToken, email } = await createPasswordResetToken({
+        email: "successful-reset-password@example.com",
+      });
+
+      const res = await request(app).post("/auth/reset-password").send({
+        token: resetToken,
+        newPassword: "NewPassword123!",
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.message).toBe(PASSWORD_RESET_SUCCESS_MESSAGE);
+      expect(res.body.passwordHash).toBeUndefined();
+
+      const user = await User.findOne({ email }).select(
+        "+passwordResetTokenHash +passwordResetExpiresAt"
+      );
+
+      expect(user.passwordResetTokenHash).toBeNull();
+      expect(user.passwordResetExpiresAt).toBeNull();
+
+      const oldLoginRes = await loginUser({
+        email,
+        password: TEST_PASSWORD,
+      });
+
+      expect(oldLoginRes.statusCode).toBe(401);
+
+      const newLoginRes = await loginUser({
+        email,
+        password: "NewPassword123!",
+      });
+
+      expect(newLoginRes.statusCode).toBe(200);
+      expect(newLoginRes.body.token).toBeDefined();
+
+      const reuseRes = await request(app).post("/auth/reset-password").send({
+        token: resetToken,
+        newPassword: "AnotherPassword123!",
+      });
+
+      expect(reuseRes.statusCode).toBe(400);
+      expect(reuseRes.body.message).toBe(INVALID_OR_EXPIRED_RESET_TOKEN_MESSAGE);
     });
   });
 });
@@ -332,7 +639,7 @@ describe("User Profile API", () => {
   describe("PATCH /users/me/password", () => {
     test("rejects password change without token", async () => {
       const res = await request(app).patch("/users/me/password").send({
-        currentPassword: "test123456",
+        currentPassword: TEST_PASSWORD,
         newPassword: "newPassword123",
       });
 
@@ -342,7 +649,7 @@ describe("User Profile API", () => {
 
     test.each([
       ["currentPassword", { newPassword: "newPassword123" }],
-      ["newPassword", { currentPassword: "test123456" }],
+      ["newPassword", { currentPassword: TEST_PASSWORD }],
     ])("rejects password change without %s", async (_field, payload) => {
       const { token } = await createAuthenticatedUser({
         email: "missing-password-field@example.com",
@@ -359,23 +666,21 @@ describe("User Profile API", () => {
       );
     });
 
-    test("rejects a short new password", async () => {
+    test("rejects a weak new password", async () => {
       const { token } = await createAuthenticatedUser({
-        email: "short-password@example.com",
+        email: "weak-password@example.com",
       });
 
       const res = await request(app)
         .patch("/users/me/password")
         .set("Authorization", `Bearer ${token}`)
         .send({
-          currentPassword: "test123456",
-          newPassword: "short",
+          currentPassword: TEST_PASSWORD,
+          newPassword: "weakpassword123",
         });
 
       expect(res.statusCode).toBe(400);
-      expect(res.body.message).toBe(
-        "newPassword muss mindestens 8 Zeichen lang sein"
-      );
+      expect(res.body.message).toBe(PASSWORD_POLICY_MESSAGE);
     });
 
     test("rejects password change with wrong current password", async () => {
@@ -388,7 +693,7 @@ describe("User Profile API", () => {
         .set("Authorization", `Bearer ${token}`)
         .send({
           currentPassword: "wrong-password",
-          newPassword: "newPassword123",
+          newPassword: "NewPassword123!",
         });
 
       expect(res.statusCode).toBe(401);
@@ -406,8 +711,8 @@ describe("User Profile API", () => {
         .patch("/users/me/password")
         .set("Authorization", `Bearer ${token}`)
         .send({
-          currentPassword: "test123456",
-          newPassword: "newPassword123",
+          currentPassword: TEST_PASSWORD,
+          newPassword: "NewPassword123!",
         });
 
       expect(res.statusCode).toBe(403);
@@ -419,15 +724,15 @@ describe("User Profile API", () => {
 
       const { token } = await createAuthenticatedUser({
         email,
-        password: "oldPassword123",
+        password: "OldPassword123!",
       });
 
       const res = await request(app)
         .patch("/users/me/password")
         .set("Authorization", `Bearer ${token}`)
         .send({
-          currentPassword: "oldPassword123",
-          newPassword: "newPassword123",
+          currentPassword: "OldPassword123!",
+          newPassword: "NewPassword123!",
         });
 
       expect(res.statusCode).toBe(200);
@@ -436,14 +741,14 @@ describe("User Profile API", () => {
 
       const oldLoginRes = await loginUser({
         email,
-        password: "oldPassword123",
+        password: "OldPassword123!",
       });
 
       expect(oldLoginRes.statusCode).toBe(401);
 
       const newLoginRes = await loginUser({
         email,
-        password: "newPassword123",
+        password: "NewPassword123!",
       });
 
       expect(newLoginRes.statusCode).toBe(200);

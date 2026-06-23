@@ -8,7 +8,7 @@ const authController = require("../controllers/authController");
  * @swagger
  * tags:
  *   name: Authentication
- *   description: User registration and login
+ *   description: User authentication and password management
  */
 
 /**
@@ -36,7 +36,7 @@ const authController = require("../controllers/authController");
  *                 example: testuser@example.com
  *               password:
  *                 type: string
- *                 example: test123456
+ *                 example: TestPassword123!
  *     responses:
  *       201:
  *         description: User registered successfully
@@ -71,7 +71,7 @@ router.post("/register", authController.register);
  *                 example: testuser@example.com
  *               password:
  *                 type: string
- *                 example: test123456
+ *                 example: TestPassword123!
  *     responses:
  *       200:
  *         description: Login successful, JWT token returned
@@ -83,5 +83,87 @@ router.post("/register", authController.register);
  *         description: Internal server error
  */
 router.post("/login", authController.login);
+
+/**
+ * @swagger
+ * /auth/forgot-password:
+ *   post:
+ *     summary: Request password reset email
+ *     description: Creates a password reset token for an active user account and sends a reset link by email.
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: testuser@example.com
+ *     responses:
+ *       200:
+ *         description: Generic password reset response returned
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Wenn ein Konto mit dieser E-Mail existiert, wurde ein Link zum Zuruecksetzen des Passworts gesendet
+ *       400:
+ *         description: Email missing
+ *       403:
+ *         description: User account is disabled
+ *       500:
+ *         description: Internal server error or email delivery failure
+ */
+router.post("/forgot-password", authController.forgotPassword);
+
+/**
+ * @swagger
+ * /auth/reset-password:
+ *   post:
+ *     summary: Reset password with token
+ *     description: Resets the password using a valid password reset token. The new password must follow the strong password policy.
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - newPassword
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 example: reset-token-from-email
+ *               newPassword:
+ *                 type: string
+ *                 example: NewPassword123!
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Passwort wurde zurueckgesetzt
+ *       400:
+ *         description: Missing fields, weak password, invalid token, or expired token
+ *       403:
+ *         description: User account is disabled
+ *       500:
+ *         description: Internal server error
+ */
+router.post("/reset-password", authController.resetPassword);
 
 module.exports = router;

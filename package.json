@@ -4,9 +4,9 @@
   "description": "User authentication and profile management REST API built with Node.js, Express, MongoDB, bcrypt and JWT.",
   "main": "index.js",
   "scripts": {
-  "start": "node index.js",
-  "test": "cross-env NODE_ENV=test jest --runInBand"
-},
+    "start": "node index.js",
+    "test": "cross-env NODE_ENV=test jest --runInBand"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tabari86/user-management-service.git"
@@ -24,6 +24,7 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.20.0",
+    "nodemailer": "^9.0.1",
     "swagger-jsdoc": "^6.3.0",
     "swagger-ui-express": "^5.0.1"
   },

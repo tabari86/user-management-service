@@ -1,7 +1,7 @@
 # User Management Service
 
 
-![CI](https://github.com/tabari86/invoice-api/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/tabari86/user-management-service/actions/workflows/ci.yml/badge.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-22-green?logo=nodedotjs)
 ![Express](https://img.shields.io/badge/Express-API-black?logo=express)
 ![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-green?logo=mongodb)
@@ -17,7 +17,8 @@
 
 --- 
 
-A lightweight REST API for user registration, login, JWT authentication and protected user profile management.
+A lightweight REST API for user registration, login, JWT authentication, protected profile management, admin user management and password reset workflows.
+
 
 ---
 
@@ -25,9 +26,9 @@ A lightweight REST API for user registration, login, JWT authentication and prot
 
 User Management Service is a backend service built with Node.js, Express, MongoDB and JWT.
 
-The project demonstrates a clean authentication flow with user registration, password hashing, login, JWT token generation and protected user profile routes.
+The project demonstrates a realistic user management API with registration, login, password hashing, JWT-based authentication, protected profile routes, admin user management, account status handling and password reset workflows.
 
-It follows a modular backend structure using controllers, routes, middleware and models.
+It follows a modular backend structure using controllers, routes, middleware, services, utilities and Mongoose models.
 
 ---
 
@@ -71,23 +72,24 @@ http://localhost:3000/api-docs
 
 ## Features
 
-| Feature             | Description                                         |
-| ------------------  | ----------------------------------------------------|
-| User Registration   | Create a new user account                           |
-| Password Hashing    | Passwords are hashed with bcrypt                    |
-| Login               | Authenticate user credentials                       |
-| JWT Authentication  | Generate and validate JWT tokens                    |
-| Protected Routes    | Access user data with Bearer Token                  |
-| User Profile        | Get current authenticated user                      |
-| Profile Update      | Update own profile data                             |
-| MongoDB             | Store user data persistently                        |
-| Swagger/OpenAPI     | Interactive API documentation                       |
-| Automated Tests     | API testing with Jest and Supertest                 |
-| Integration Testing | Endpoint validation and authentication flow testing |
-| Docker Support      | Containerized application and database              |
-| CI/CD Pipeline      | Automated test execution with GitHub Actions        |
-
-
+| Feature                | Description                                                    |
+| ---------------------- | -------------------------------------------------------------- |
+| User Registration      | Create a new user account with strong password validation      |
+| Password Hashing       | Passwords are hashed with bcrypt                               |
+| Login                  | Authenticate user credentials and return a JWT token           |
+| JWT Authentication     | Protect API routes with Bearer Token authentication            |
+| User Profile           | Get and update the current authenticated user profile          |
+| Password Change        | Change the current user's password after password verification |
+| Forgot Password        | Request a password reset link by email                         |
+| Reset Password         | Reset password with a time-limited reset token                 |
+| Password Policy        | Enforce strong passwords for registration, change and reset    |
+| Admin User Management  | List users and manage account status                           |
+| Account Status Control | Activate or disable user accounts                              |
+| MongoDB                | Store user data persistently                                   |
+| Swagger/OpenAPI        | Interactive API documentation                                  |
+| Automated Tests        | API testing with Jest and Supertest                            |
+| Docker Support         | Containerized application and database                         |
+| CI/CD Pipeline         | Automated test execution with GitHub Actions                   |
 
 
 ---
@@ -100,6 +102,7 @@ http://localhost:3000/api-docs
 * Mongoose
 * JWT
 * bcrypt
+* Nodemailer
 * Swagger / OpenAPI
 * Jest
 * Supertest
@@ -111,19 +114,74 @@ http://localhost:3000/api-docs
 
 ---
 
+
 ## API Endpoints
 
-| Method | Endpoint              | Description                              | Auth         |
-| ------ | --------------------- | ---------------------------------------- | ------------ |
-| GET    | `/health`             | Check API service status                 | No           |
-| POST   | `/auth/register`      | Register a new user                      | No           |
-| POST   | `/auth/login`         | Login and receive JWT token              | No           |
-| GET    | `/users/me`           | Get current user profile                 | Bearer Token |
-| PUT    | `/users/me`           | Update current user profile              | Bearer Token |
-| PATCH  | `/users/me/password`  | Change current user password             | Bearer Token |
-| GET    | `/users`              | List all users                           | Admin only   |
-| PATCH  | `/users/:id/status`   | Activate or disable a user account       | Admin only   |
+| Method | Endpoint                | Description                             | Auth         |
+| ------ | ----------------------- | --------------------------------------- | ------------ |
+| GET    | `/health`               | Check API service status                | No           |
+| POST   | `/auth/register`        | Register a new user                     | No           |
+| POST   | `/auth/login`           | Login and receive JWT token             | No           |
+| POST   | `/auth/forgot-password` | Request a password reset email          | No           |
+| POST   | `/auth/reset-password`  | Reset password with a valid reset token | No           |
+| GET    | `/users/me`             | Get current user profile                | Bearer Token |
+| PUT    | `/users/me`             | Update current user profile             | Bearer Token |
+| PATCH  | `/users/me/password`    | Change current user password            | Bearer Token |
+| GET    | `/users`                | List all users                          | Admin only   |
+| PATCH  | `/users/:id/status`     | Activate or disable a user account      | Admin only   |
 
+
+---
+
+## Security and Account Status Behavior
+
+Protected endpoints require a valid Bearer token.
+
+For every protected request, the API checks the current user record in the database. This means that user roles and account status are evaluated from the latest database state, not only from the JWT payload.
+
+Disabled users cannot access protected endpoints, even if they still have an older valid token. This applies to regular users and admins.
+
+If a user account no longer exists, protected requests return `404 Benutzer nicht gefunden`.
+
+This behavior prevents outdated tokens from keeping access after an account has been disabled, deleted, or downgraded.
+
+---
+
+## Password Reset Behavior
+
+The API supports a backend-only password reset flow.
+
+A user can request a password reset link with `POST /auth/forgot-password`. If the email belongs to an active account, the API creates a reset token and sends a reset link by email.
+
+For security reasons, the raw reset token is never stored in the database. Only a SHA-256 hash of the token is stored together with an expiration timestamp.
+
+Password reset tokens expire after 15 minutes by default. The expiry time can be configured with `PASSWORD_RESET_TOKEN_EXPIRY_MINUTES`.
+
+The API returns a generic response for unknown email addresses. This helps prevent user enumeration.
+
+Disabled users cannot request or use password reset tokens.
+
+After a successful password reset, the stored reset token hash and expiration timestamp are cleared so the same token cannot be reused.
+
+---
+
+## Password Policy
+
+The same strong password policy is applied to:
+
+* User registration
+* Password change
+* Password reset
+
+Passwords must:
+
+* Be between 12 and 128 characters long
+* Include at least one lowercase letter
+* Include at least one uppercase letter
+* Include at least one number
+* Include at least one special character
+
+Whitespace does not count as a special character.
 
 ---
 
@@ -146,11 +204,16 @@ user-management-service/
 ├── routes/
 │   ├── authRoutes.js
 │   └── userRoutes.js
+├── services/
+│   └── emailService.js
 ├── swagger/
 │   └── userSwagger.js
 ├── tests/
+│   ├── admin.api.test.js
 │   ├── auth.api.test.js
 │   └── health.test.js
+├── utils/
+│   └── passwordPolicy.js
 ├── .dockerignore  
 ├── .env.example
 ├── .gitignore
@@ -173,7 +236,20 @@ Create a local `.env` file based on `.env.example`.
 PORT=3000
 MONGODB_URI=mongodb://127.0.0.1:27017/user-management
 JWT_SECRET=your_jwt_secret_here
+
+APP_BASE_URL=http://localhost:3000
+
+SMTP_HOST=sandbox.smtp.mailtrap.io
+SMTP_PORT=2525
+SMTP_USER=your_mailtrap_username
+SMTP_PASS=your_mailtrap_password
+SMTP_FROM="User Management Service <no-reply@example.com>"
+
+PASSWORD_RESET_TOKEN_EXPIRY_MINUTES=15
 ```
+
+For local email testing, Mailtrap Email Sandbox can be used as an SMTP provider. Real SMTP credentials must be configured in the local `.env` file or in the Render environment settings. Secrets are not committed to the repository.
+
 
 ---
 
@@ -206,6 +282,7 @@ Swagger UI:
 ```text
 http://localhost:3000/api-docs
 ```
+---
 
 ## Docker
 
@@ -243,6 +320,9 @@ Stop the containers:
 ```bash
 docker compose down
 ```
+---
+
+
 ## Continuous Integration (CI)
 
 This project uses GitHub Actions to automatically run the test suite on every push and pull request to the main branch.
@@ -274,12 +354,17 @@ Implemented:
 * Dockerfile
 * Docker Compose setup
 * GitHub Actions CI workflow
+* Admin user management
+* Account activation and disabling
+* Password change endpoint
+* Forgot password flow
+* Reset password flow
+* Strong password policy
+* Mailtrap SMTP integration for password reset emails
 
 Planned improvements:
 - Metrics endpoint
 - Refresh token flow
-- Password reset flow
-- Role-based access control (RBAC)
 
 ---
 
@@ -290,7 +375,7 @@ Planned improvements:
 ```bash
 curl -X POST http://localhost:3000/auth/register \
   -H "Content-Type: application/json" \
-  -d "{\"name\":\"Test User\",\"email\":\"testuser@example.com\",\"password\":\"test123456\"}"
+  -d "{\"name\":\"Test User\",\"email\":\"testuser@example.com\",\"password\":\"TestPassword123!\"}"
 ```
 
 ### Login
@@ -298,7 +383,7 @@ curl -X POST http://localhost:3000/auth/register \
 ```bash
 curl -X POST http://localhost:3000/auth/login \
   -H "Content-Type: application/json" \
-  -d "{\"email\":\"testuser@example.com\",\"password\":\"test123456\"}"
+  -d "{\"email\":\"testuser@example.com\",\"password\":\"TestPassword123!\"}"
 ```
 
 ### Get Current User
@@ -328,7 +413,12 @@ Authorization: Bearer YOUR_JWT_TOKEN
 
 * Passwords are never stored as plain text.
 * Passwords are hashed with bcrypt.
+* Strong password validation is applied to registration, password change and password reset.
+* Password reset tokens are not stored as plain text.
+* Password reset tokens are stored as SHA-256 hashes with an expiration timestamp.
+* Reset tokens are cleared after successful password reset.
 * Protected routes require a valid JWT token.
+* Protected routes check the current user status from the database.
 * Secret values are stored in `.env`.
 * Only `.env.example` is committed to the repository.
 
@@ -339,7 +429,7 @@ Authorization: Bearer YOUR_JWT_TOKEN
 
 **Moj Tabari**
 
-Website : 
+Website:
 https://mtintelligence.ai
 
 GitHub:

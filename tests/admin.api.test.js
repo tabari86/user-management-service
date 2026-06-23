@@ -4,12 +4,13 @@ const request = require("supertest");
 const mongoose = require("mongoose");
 const app = require("../app");
 const User = require("../models/user");
+const TEST_PASSWORD = "TestPassword123!";
 
 async function registerUser(overrides = {}) {
     const payload = {
         name: "Test User",
         email: "testuser@example.com",
-        password: "test123456",
+        password: TEST_PASSWORD,
         ...overrides,
     };
 
@@ -19,7 +20,7 @@ async function registerUser(overrides = {}) {
 async function loginUser(overrides = {}) {
     const payload = {
         email: "testuser@example.com",
-        password: "test123456",
+        password: TEST_PASSWORD,
         ...overrides,
     };
 
@@ -30,7 +31,7 @@ async function createAuthenticatedUser(overrides = {}) {
     const userData = {
         name: "Authenticated User",
         email: "authuser@example.com",
-        password: "test123456",
+        password: TEST_PASSWORD,
         role: "user",
         ...overrides,
     };
@@ -165,7 +166,7 @@ describe("Admin User Management API", () => {
             const targetUser = await User.create({
                 name: "Target User",
                 email: "target@example.com",
-                passwordHash: "hashed-password",
+                passwordHash: "TestPassword123!",
             });
 
             const res = await request(app)
@@ -185,7 +186,7 @@ describe("Admin User Management API", () => {
             const targetUser = await User.create({
                 name: "Target User",
                 email: "target-status@example.com",
-                passwordHash: "hashed-password",
+                passwordHash: "TestPassword123!",
             });
 
             const res = await request(app)
@@ -206,7 +207,7 @@ describe("Admin User Management API", () => {
             const targetUser = await User.create({
                 name: "Target User",
                 email: "target-disabled-admin-status@example.com",
-                passwordHash: "hashed-password",
+                passwordHash: "TestPassword123!",
             });
 
             await User.findByIdAndUpdate(admin._id, { status: "disabled" });
@@ -229,7 +230,7 @@ describe("Admin User Management API", () => {
             const targetUser = await User.create({
                 name: "Target User",
                 email: "target-invalid-status@example.com",
-                passwordHash: "hashed-password",
+                passwordHash: "TestPassword123!",
             });
 
             const res = await request(app)
@@ -267,7 +268,7 @@ describe("Admin User Management API", () => {
             const targetUser = await User.create({
                 name: "User To Disable",
                 email: "disable-target@example.com",
-                passwordHash: "hashed-password",
+                passwordHash: "TestPassword123!",
             });
 
             const res = await request(app)
@@ -293,7 +294,7 @@ describe("Admin User Management API", () => {
             const targetUser = await User.create({
                 name: "User To Reactivate",
                 email: "reactivate-target@example.com",
-                passwordHash: "hashed-password",
+                passwordHash: "TestPassword123!",
                 status: "disabled",
                 disabledAt: new Date(),
             });
@@ -319,7 +320,7 @@ describe("Admin User Management API", () => {
             await registerUser({
                 name: "User Disabled By Admin",
                 email: "disabled-by-admin@example.com",
-                password: "test123456",
+                password: TEST_PASSWORD,
             });
 
             const targetUser = await User.findOne({
@@ -336,7 +337,7 @@ describe("Admin User Management API", () => {
 
             const loginRes = await loginUser({
                 email: "disabled-by-admin@example.com",
-                password: "test123456",
+                password: TEST_PASSWORD,
             });
 
             expect(loginRes.statusCode).toBe(403);

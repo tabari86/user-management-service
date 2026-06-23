@@ -2,6 +2,7 @@
 
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
+const { validatePasswordPolicy } = require("../utils/passwordPolicy");
 
 // GET /users
 exports.listUsers = async (req, res) => {
@@ -30,9 +31,11 @@ exports.changePassword = async (req, res) => {
       });
     }
 
-    if (newPassword.length < 8) {
+    const passwordValidation = validatePasswordPolicy(newPassword);
+
+    if (!passwordValidation.isValid) {
       return res.status(400).json({
-        message: "newPassword muss mindestens 8 Zeichen lang sein",
+        message: passwordValidation.message,
       });
     }
 
