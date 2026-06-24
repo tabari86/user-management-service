@@ -1,5 +1,10 @@
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
+const appBaseUrl = process.env.APP_BASE_URL || "http://localhost:3000";
+
+const serverDescription = process.env.APP_BASE_URL
+  ? "Configured application server"
+  : "Local development server";
 
 const options = {
   definition: {
@@ -8,12 +13,12 @@ const options = {
       title: "User Management Service API",
       version: "1.0.0",
       description:
-        "OpenAPI documentation for user registration, login and protected user profile routes.",
+        "OpenAPI documentation for authentication, password management and user management routes.",
     },
     servers: [
       {
-        url: "http://localhost:3000",
-        description: "Local development server",
+        url: appBaseUrl,
+        description: serverDescription,
       },
     ],
     components: {

@@ -1,7 +1,7 @@
 # User Management Service
 
 
-![CI](https://github.com/tabari86/user-management-service/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/tabari86/user-management-service/actions/workflows/test.yml/badge.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-22-green?logo=nodedotjs)
 ![Express](https://img.shields.io/badge/Express-API-black?logo=express)
 ![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-green?logo=mongodb)
