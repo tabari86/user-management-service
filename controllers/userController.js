@@ -7,12 +7,63 @@ const { validatePasswordPolicy } = require("../utils/passwordPolicy");
 // GET /users
 exports.listUsers = async (req, res) => {
   try {
-    const users = await User.find()
-      .select("-passwordHash")
-      .sort({ createdAt: -1 });
+    const page = req.query.page === undefined ? 1 : Number(req.query.page);
+    const limit = req.query.limit === undefined ? 10 : Number(req.query.limit);
+    const { status, role } = req.query;
+
+    if (!Number.isInteger(page) || page < 1) {
+      return res.status(400).json({
+        message: "page muss eine Zahl groesser oder gleich 1 sein",
+      });
+    }
+
+    if (!Number.isInteger(limit) || limit < 1 || limit > 50) {
+      return res.status(400).json({
+        message: "limit muss zwischen 1 und 50 liegen",
+      });
+    }
+
+    if (status !== undefined && !["active", "disabled"].includes(status)) {
+      return res.status(400).json({
+        message: "status muss active oder disabled sein",
+      });
+    }
+
+    if (role !== undefined && !["user", "admin"].includes(role)) {
+      return res.status(400).json({
+        message: "role muss user oder admin sein",
+      });
+    }
+
+    const filter = {};
+
+    if (status !== undefined) {
+      filter.status = status;
+    }
+
+    if (role !== undefined) {
+      filter.role = role;
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [users, totalUsers] = await Promise.all([
+      User.find(filter)
+        .select("-passwordHash")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      User.countDocuments(filter),
+    ]);
 
     res.json({
       users,
+      pagination: {
+        page,
+        limit,
+        totalUsers,
+        totalPages: Math.ceil(totalUsers / limit),
+      },
     });
   } catch (err) {
     console.error("Fehler bei listUsers:", err);

@@ -12,11 +12,39 @@ const requireRole = require("../middleware/requireRole");
  * @swagger
  * /users:
  *   get:
- *     summary: List all users
- *     description: Returns all user accounts. This endpoint is restricted to users with the admin role.
+ *     summary: List users
+ *     description: Returns paginated user accounts. This endpoint is restricted to users with the admin role.
  *     tags: [Users]
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of users per page
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, disabled]
+ *         description: Filter users by account status
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [user, admin]
+ *         description: Filter users by role
  *     responses:
  *       200:
  *         description: Users returned successfully
@@ -41,9 +69,11 @@ const requireRole = require("../middleware/requireRole");
  *                         example: Test User
  *                       role:
  *                         type: string
+ *                         enum: [user, admin]
  *                         example: user
  *                       status:
  *                         type: string
+ *                         enum: [active, disabled]
  *                         example: active
  *                       statusChangedAt:
  *                         type: string
@@ -59,6 +89,23 @@ const requireRole = require("../middleware/requireRole");
  *                       createdAt:
  *                         type: string
  *                         format: date-time
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                       example: 1
+ *                     limit:
+ *                       type: integer
+ *                       example: 10
+ *                     totalUsers:
+ *                       type: integer
+ *                       example: 25
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 3
+ *       400:
+ *         description: Invalid query parameters
  *       401:
  *         description: Missing, invalid or expired JWT token
  *       403:

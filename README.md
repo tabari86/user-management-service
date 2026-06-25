@@ -83,7 +83,7 @@ http://localhost:3000/api-docs
 | Forgot Password        | Request a password reset link by email                         |
 | Reset Password         | Reset password with a time-limited reset token                 |
 | Password Policy        | Enforce strong passwords for registration, change and reset    |
-| Admin User Management  | List users and manage account status                           |
+| Admin User Management  | List users with pagination and filters                         |
 | Account Status Control | Activate or disable user accounts                              |
 | MongoDB                | Store user data persistently                                   |
 | Swagger/OpenAPI        | Interactive API documentation                                  |
@@ -127,9 +127,34 @@ http://localhost:3000/api-docs
 | GET    | `/users/me`             | Get current user profile                | Bearer Token |
 | PUT    | `/users/me`             | Update current user profile             | Bearer Token |
 | PATCH  | `/users/me/password`    | Change current user password            | Bearer Token |
-| GET    | `/users`                | List all users                          | Admin only   |
+| GET    | `/users`                | List users with pagination and filters  | Admin only   |
 | PATCH  | `/users/:id/status`     | Activate or disable a user account      | Admin only   |
 
+---
+
+## Admin User List Query Parameters
+
+The admin user list endpoint supports pagination and simple filtering.
+
+```text
+GET /users?page=1&limit=10
+GET /users?status=active
+GET /users?status=disabled
+GET /users?role=user
+GET /users?role=admin
+GET /users?page=2&limit=5&status=active&role=user
+```
+
+Supported query parameters:
+
+| Parameter | Description                    | Default | Allowed values       |
+| --------- | ------------------------------ | ------- | -------------------- |
+| `page`    | Page number                    | `1`     | Minimum `1`          |
+| `limit`   | Number of users per page       | `10`    | `1` to `50`          |
+| `status`  | Filter users by account status | -       | `active`, `disabled` |
+| `role`    | Filter users by role           | -       | `user`, `admin`      |
+
+The response includes a `pagination` object with the current page, limit, total number of matching users and total pages.
 
 ---
 
@@ -355,6 +380,7 @@ Implemented:
 * Docker Compose setup
 * GitHub Actions CI workflow
 * Admin user management
+* Admin user list pagination and filtering
 * Account activation and disabling
 * Password change endpoint
 * Forgot password flow

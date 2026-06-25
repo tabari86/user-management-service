@@ -148,6 +148,12 @@ describe("Admin User Management API", () => {
             expect(res.statusCode).toBe(200);
             expect(Array.isArray(res.body.users)).toBe(true);
             expect(res.body.users).toHaveLength(2);
+            expect(res.body.pagination).toEqual({
+                page: 1,
+                limit: 10,
+                totalUsers: 2,
+                totalPages: 1,
+            });
 
             const emails = res.body.users.map((user) => user.email);
             expect(emails).toContain("admin@example.com");
@@ -159,6 +165,163 @@ describe("Admin User Management API", () => {
                 expect(user.role).toBeDefined();
                 expect(user.status).toBeDefined();
             }
+        });
+
+        test("supports page and limit query parameters", async () => {
+            const { token } = await createAuthenticatedUser({
+                email: "pagination-admin@example.com",
+                role: "admin",
+            });
+
+            const usersToCreate = Array.from({ length: 12 }, (_value, index) => ({
+                name: `Pagination User ${index + 1}`,
+                email: `pagination-user-${index + 1}@example.com`,
+                passwordHash: "hashed-password",
+                role: "user",
+                status: "active",
+            }));
+
+            await User.insertMany(usersToCreate);
+
+            const res = await request(app)
+                .get("/users?page=2&limit=5")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.users).toHaveLength(5);
+            expect(res.body.pagination).toEqual({
+                page: 2,
+                limit: 5,
+                totalUsers: 13,
+                totalPages: 3,
+            });
+
+            for (const user of res.body.users) {
+                expect(user.passwordHash).toBeUndefined();
+            }
+        });
+
+        test("filters users by status", async () => {
+            const { token } = await createAuthenticatedUser({
+                email: "status-filter-admin@example.com",
+                role: "admin",
+            });
+
+            await User.create([
+                {
+                    name: "Active User",
+                    email: "active-filter-user@example.com",
+                    passwordHash: "hashed-password",
+                    role: "user",
+                    status: "active",
+                },
+                {
+                    name: "Disabled User",
+                    email: "disabled-filter-user@example.com",
+                    passwordHash: "hashed-password",
+                    role: "user",
+                    status: "disabled",
+                },
+            ]);
+
+            const res = await request(app)
+                .get("/users?status=disabled")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.users).toHaveLength(1);
+            expect(res.body.users[0].email).toBe("disabled-filter-user@example.com");
+            expect(res.body.users[0].status).toBe("disabled");
+            expect(res.body.pagination.totalUsers).toBe(1);
+        });
+
+        test("filters users by role", async () => {
+            const { token } = await createAuthenticatedUser({
+                email: "role-filter-admin@example.com",
+                role: "admin",
+            });
+
+            await User.create({
+                name: "Regular Role Filter User",
+                email: "regular-role-filter@example.com",
+                passwordHash: "hashed-password",
+                role: "user",
+                status: "active",
+            });
+
+            const res = await request(app)
+                .get("/users?role=admin")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.users).toHaveLength(1);
+            expect(res.body.users[0].email).toBe("role-filter-admin@example.com");
+            expect(res.body.users[0].role).toBe("admin");
+            expect(res.body.pagination.totalUsers).toBe(1);
+        });
+
+        test("combines pagination with filters", async () => {
+            const { token } = await createAuthenticatedUser({
+                email: "combined-filter-admin@example.com",
+                role: "admin",
+            });
+
+            await User.create([
+                {
+                    name: "Disabled User One",
+                    email: "disabled-combined-1@example.com",
+                    passwordHash: "hashed-password",
+                    role: "user",
+                    status: "disabled",
+                },
+                {
+                    name: "Disabled User Two",
+                    email: "disabled-combined-2@example.com",
+                    passwordHash: "hashed-password",
+                    role: "user",
+                    status: "disabled",
+                },
+                {
+                    name: "Active User",
+                    email: "active-combined@example.com",
+                    passwordHash: "hashed-password",
+                    role: "user",
+                    status: "active",
+                },
+            ]);
+
+            const res = await request(app)
+                .get("/users?status=disabled&page=1&limit=1")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.users).toHaveLength(1);
+            expect(res.body.users[0].status).toBe("disabled");
+            expect(res.body.pagination).toEqual({
+                page: 1,
+                limit: 1,
+                totalUsers: 2,
+                totalPages: 2,
+            });
+        });
+
+        test.each([
+            ["invalid status", "/users?status=locked", "status muss active oder disabled sein"],
+            ["invalid role", "/users?role=manager", "role muss user oder admin sein"],
+            ["invalid page", "/users?page=0", "page muss eine Zahl groesser oder gleich 1 sein"],
+            ["invalid limit", "/users?limit=51", "limit muss zwischen 1 und 50 liegen"],
+        ])("rejects %s query parameter", async (_caseName, url, expectedMessage) => {
+            const { token } = await createAuthenticatedUser({
+                email: `${_caseName.replaceAll(" ", "-")}@example.com`,
+                role: "admin",
+            });
+
+            const res = await request(app)
+                .get(url)
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.message).toBe(expectedMessage);
         });
     });
     describe("PATCH /users/:id/status", () => {
