@@ -175,6 +175,8 @@ router.post(
  *         description: Missing fields, weak password, invalid token, or expired token
  *       403:
  *         description: User account is disabled
+ *       429:
+ *         description: Too many requests
  *       500:
  *         description: Internal server error
  */

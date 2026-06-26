@@ -9,13 +9,13 @@ const MONGODB_URI = process.env.MONGODB_URI;
 mongoose
   .connect(MONGODB_URI)
   .then(() => {
-    console.log("✅ Mit MongoDB verbunden");
+    console.log("MongoDB connected");
 
     app.listen(PORT, () => {
-      console.log(`🚀 Server läuft auf http://localhost:${PORT}`);
+      console.log(`Server running on http://localhost:${PORT}`);
     });
   })
   .catch((err) => {
-    console.error("Konnte nicht mit MongoDB verbinden:", err.message);
+    console.error("Could not connect to MongoDB:", err.message);
     process.exit(1);
   });

@@ -425,9 +425,10 @@ Implemented:
 * Rate limiting for public authentication endpoints
 * Mailtrap SMTP integration for password reset emails
 
-Planned improvements:
-- Metrics endpoint
-- Refresh token flow
+Possible future improvements:
+
+- Shared rate limit store for multi-instance deployments
+- Refresh token flow, if long-lived sessions are required
 
 ---
 

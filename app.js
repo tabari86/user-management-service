@@ -21,7 +21,7 @@ app.get("/health", (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.send("User Management Service API läuft 🚀");
+  res.send("User Management Service API is running");
 });
 
 module.exports = app;
