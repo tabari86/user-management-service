@@ -83,6 +83,7 @@ http://localhost:3000/api-docs
 | Forgot Password        | Request a password reset link by email                         |
 | Reset Password         | Reset password with a time-limited reset token                 |
 | Password Policy        | Enforce strong passwords for registration, change and reset    |
+| Rate Limiting          | Limit repeated requests to public authentication endpoints     |
 | Admin User Management  | List users with pagination and filters                         |
 | Account Status Control | Activate or disable user accounts                              |
 | MongoDB                | Store user data persistently                                   |
@@ -103,6 +104,7 @@ http://localhost:3000/api-docs
 * JWT
 * bcrypt
 * Nodemailer
+* express-rate-limit
 * Swagger / OpenAPI
 * Jest
 * Supertest
@@ -210,6 +212,38 @@ Whitespace does not count as a special character.
 
 ---
 
+## Rate Limiting
+
+Public authentication endpoints are protected with request rate limiting.
+
+Protected endpoints:
+
+```text
+POST /auth/register
+POST /auth/login
+POST /auth/forgot-password
+POST /auth/reset-password
+```
+
+Current limits:
+
+| Endpoint group                     | Limit                             |
+| ---------------------------------- | --------------------------------- |
+| Register, login and reset password | 20 requests per 15 minutes per IP |
+| Forgot password                    | 5 requests per 15 minutes per IP  |
+
+When the limit is exceeded, the API returns:
+
+```json
+{
+  "message": "Zu viele Anfragen. Bitte versuchen Sie es spaeter erneut."
+}
+```
+
+The current implementation uses the default in-memory store, which is suitable for this single-instance Render deployment. For multi-instance deployments, a shared store such as Redis should be used.
+
+---
+
 ## Project Structure
 
 ```text
@@ -223,7 +257,8 @@ user-management-service/
 ├── docs/
 │   └── swagger-ui.png
 ├── middleware/
-│   └── authMiddleware.js
+│   ├── authMiddleware.js
+│   └── rateLimiters.js
 ├── models/
 │   └── user.js
 ├── routes/
@@ -236,7 +271,8 @@ user-management-service/
 ├── tests/
 │   ├── admin.api.test.js
 │   ├── auth.api.test.js
-│   └── health.test.js
+│   ├── health.test.js
+│   └── rateLimit.api.test.js
 ├── utils/
 │   └── passwordPolicy.js
 ├── .dockerignore  
@@ -386,6 +422,7 @@ Implemented:
 * Forgot password flow
 * Reset password flow
 * Strong password policy
+* Rate limiting for public authentication endpoints
 * Mailtrap SMTP integration for password reset emails
 
 Planned improvements:
@@ -440,6 +477,7 @@ Authorization: Bearer YOUR_JWT_TOKEN
 * Passwords are never stored as plain text.
 * Passwords are hashed with bcrypt.
 * Strong password validation is applied to registration, password change and password reset.
+* Public authentication endpoints are protected with rate limiting.
 * Password reset tokens are not stored as plain text.
 * Password reset tokens are stored as SHA-256 hashes with an expiration timestamp.
 * Reset tokens are cleared after successful password reset.

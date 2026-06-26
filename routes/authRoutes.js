@@ -3,6 +3,10 @@
 const express = require("express");
 const router = express.Router();
 const authController = require("../controllers/authController");
+const {
+    authRateLimiter,
+    passwordResetRateLimiter,
+} = require("../middleware/rateLimiters");
 
 /**
  * @swagger
@@ -44,10 +48,12 @@ const authController = require("../controllers/authController");
  *         description: Email or password missing
  *       409:
  *         description: User already exists
+ *       429:
+ *         description: Too many requests
  *       500:
  *         description: Internal server error
  */
-router.post("/register", authController.register);
+router.post("/register", authRateLimiter, authController.register);
 
 /**
  * @swagger
@@ -79,10 +85,12 @@ router.post("/register", authController.register);
  *         description: Email or password missing
  *       401:
  *         description: Invalid email or password
+ *       429:
+ *         description: Too many requests
  *       500:
  *         description: Internal server error
  */
-router.post("/login", authController.login);
+router.post("/login", authRateLimiter, authController.login);
 
 /**
  * @swagger
@@ -118,10 +126,16 @@ router.post("/login", authController.login);
  *         description: Email missing
  *       403:
  *         description: User account is disabled
+ *       429:
+ *         description: Too many requests
  *       500:
  *         description: Internal server error or email delivery failure
  */
-router.post("/forgot-password", authController.forgotPassword);
+router.post(
+    "/forgot-password",
+    passwordResetRateLimiter,
+    authController.forgotPassword
+);
 
 /**
  * @swagger
@@ -164,6 +178,6 @@ router.post("/forgot-password", authController.forgotPassword);
  *       500:
  *         description: Internal server error
  */
-router.post("/reset-password", authController.resetPassword);
+router.post("/reset-password", authRateLimiter, authController.resetPassword);
 
 module.exports = router;
